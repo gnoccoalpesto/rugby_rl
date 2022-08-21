@@ -60,15 +60,33 @@ NOTE: if unavailable, will only throw a warning
 
 {python3} scripts/decision.py
   [-h] help
+  
   [-s] single actor: only ball bearer learns; default False
+  
   [-w WIDTH] field width; default 9
+  
   [-l LENGHT] field lenght; default 13
+  
   [-d DURATION] game duration in steps; default 20
+  
   [-g GAMES] number of games to play; default 500
+  
   [-v] will print actions performed by players in terminal; default False
+  
   [-t] will print field state in terminal; default False
+  
   [-r] will display field image; default False
+  
   [-f FRAME_DURATION] the lower, the higher the render frame rate; default 10ms
+  
   [--RNG] plays a completely random match (no learning or loss printing)
 
+
+## REPOSITORY
+
+scripts/rugby_players.py: Player class definition, distane and average team distance functions
+
+scripts/rugby_game.py: game definition, rules, actions, displaying
+
+scripts/decision.py: launches the game, learning agent definition, argparser
 
