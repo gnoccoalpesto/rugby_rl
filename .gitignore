@@ -1,0 +1,7 @@
+#notes
+*.txt
+
+#
+*.pyc
+
+/scripts/__pycache__/
