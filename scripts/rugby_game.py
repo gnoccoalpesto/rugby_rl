@@ -19,7 +19,6 @@ class RugbyGame:
                 verbose=False,tuiose=False,renderose=False,render_duration_ms=50):
 
         #GAME FIELD
-        #TODO add check on odd number, big enough
         self.FIELD_SIZE_X=field_width
         self.FIELD_SIZE_Y=field_lenght
         self.TILE_SIZE=29
@@ -39,7 +38,6 @@ class RugbyGame:
         self.DEFENDERS_INITIAL_POSES=[  [LEFT_COLUMN,DEFENDERS_LINE],
                                         [MID_COLUMN,DEFENDERS_LINE],
                                         [RIGHT_COLUMS,DEFENDERS_LINE]]
-        #TODO TIHI, dict?
         self.attackers=[Player( number=number, role="attacker",
                                 initial_pose_x=self.ATTACKERS_INITIAL_POSES[number][0],
                                 initial_pose_y=self.ATTACKERS_INITIAL_POSES[number][1])
@@ -53,8 +51,6 @@ class RugbyGame:
         #BEHAVIOURS
         self.SINGLE_ACTOR=single_actor
         self.attacker_behaviour=np.random.choice
-        # self.ATTACKER_ACTIONS=[advance,stepBack,dodge,tackle,ballPass]
-        # self.ATTACKER_BALL_ACTIONS=[advance,stepBack,dodge,ballPass]
         self.ATTACKER_ACTIONS=[ballPass,stepBack,dodge,tackle,advance]
         self.ATTACKER_BALL_ACTIONS=[ballPass,stepBack,dodge,advance]
         self.ATTACKER_NO_BALL_ACTIONS=[advance,stepBack,dodge,tackle]
@@ -68,7 +64,6 @@ class RugbyGame:
         self.defender_behaviour=np.random.choice
         self.DEFENDER_BALL_ACTIONS=[advance,dodge,stepBack,ballPass]
         self.DEFENDER_NO_BALL_ACTIONS=[advance,dodge,stepBack,tackle]
-        #this assignation for external behaviour override
         self.defender_ball_action_pool=self.DEFENDER_BALL_ACTIONS
         self.defender_no_ball_action_pool=self.DEFENDER_NO_BALL_ACTIONS
         
@@ -93,7 +88,7 @@ class RugbyGame:
         self.last_passage=None
 
         #hesitation
-        self.MAX_DECISION_TIME=.05
+        self.MAX_DECISION_TIME=.01
 
         #FIELD INITIALIZATION
         self.update()
@@ -126,39 +121,6 @@ class RugbyGame:
 
 
 #---------------------------------------------------------------------
-    # def startRandomGame(self):
-    # #TODO integrate self.step()
-    #     while self.game_counter<self.GAMES_TO_PLAY:
-    #         #INITIALIZE
-    #         self.reset()
-    #         #BEGIN EPISODE
-    #         while True:
-    #             if self.checkTerminalConditions():break
-    #             self.game_time+=1
-
-    #             if self.VERBOSE:print("GAME {} ({})\t TIME {} ({})"
-    #                                 .format(self.game_counter,self.GAMES_TO_PLAY,
-    #                                         self.game_time,self.GAME_DURATION))
-    #             if self.RENDEROSE:
-    #                 try:
-    #                     self.render()
-    #                 except NameError: pass
-
-    #             self.attackPhase()
-    #             self.defensePhase()
-
-    #         #GAME CONCLUSION
-    #         if self.VERBOSE:print('GAME OVER. winner: {}\n'.format(self.winner))
-    #             #COLLECT REWARDS
-
-    #     try:
-    #         cv2.destroyAllWindows()
-    #     except NameError: pass
-    #     print('GAME OVER\nSCORE ATT {} - {} DEF'#\nHESITATIONS ATT {} DEF {}'
-    #       .format(self.ATTACKERS_WON,self.DEFENDERS_WON))#,
-    #             #self.STUCK_ATT_COUNTER,self.STUCK_DEF_COUNTER))
-
-
     def step(self,team_actions_probabilities):
         """
         this method checks if the game terminated, otherwise plays a game's turn: attack and defense phases
@@ -191,7 +153,7 @@ class RugbyGame:
             team_actions_probabilities[0][0] if self.SINGLE_ACTOR \
             else team_actions_probabilities[0]
         
-        #NOTE defense phase at line 200
+        #NOTE defense phase performed agter reward assignation
         attack_rewards,attack_actions=self.attackPhase(team_actions_probabilities)
         
         actions=attack_actions
@@ -251,18 +213,8 @@ class RugbyGame:
                 self.winner="ATTACKERS"
                 return True
 
-        #TODO DEFENDING TEAM SURPASSED TRY LINE?
-        # for player in self.defenders:
-        #     if player.has_ball and player.y>=self.ATTACK_TEAM_LINE:
-        #         if self.VERBOSE:print("______point scored by defenders______")
-        #         self.DEFENDERS_WON+=1
-        #         self.winner="DEFENDERS"
-        #         return True
-        # return False
-
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
-    #TODO randomize actors order intead of prioritizing a team/ ball bearer?
     def attackPhase(self,team_actions_probabilities):
         rewards=[]
         actions=[]
@@ -274,35 +226,29 @@ class RugbyGame:
 
             #counts time available to perform an action
             start_time=time.time()
-            # phase_initial_ball_x=self.ball_x
             phase_initial_ball_y=self.ball_y
-            # can_append=True
             while True:
 
                 reward=0
                 
                 #only ball bearer learns to act
                 #   hence team_actions_probabilities single row
-                #REWARD_COEFF avoids learner to get reward for others', random actions; NOTE UNUSED
                 if self.SINGLE_ACTOR :
                     if player.has_ball:
                         action_pool= self.attacker_ball_action_pool
                         action_probability=team_actions_probabilities
                         #NOTE NORMALIZATION
                         action_probability/=np.sum(action_probability)
-                        # REWARD_COEFF=1
                     else:
                         #others randomly act
                         action_pool= self.attacker_no_ball_action_pool
                         action_probability=None
-                        # REWARD_COEFF=0
                 else:
                 #everyone learns to act
                     action_pool= self.attacker_action_pool
                     action_probability=team_actions_probabilities[player.number]
                     #NOTE NORMALIZATION 
                     action_probability/=np.sum(action_probability)
-                    # REWARD_COEFF=1
 
                 selected_action=self.attacker_behaviour(action_pool, \
                                                         p=action_probability).__name__
@@ -311,39 +257,24 @@ class RugbyGame:
                 if selected_action=='advance':
                     motion=np.random.randint(1,player.MAX_SPEED)
                     if advance(player,self,motion):
-                        # reward=reward_values['toward_try']*motion
                         if player.has_ball:
                             reward=reward_values['ball_possesion']
                         action_string+=' advances'
                         if not self.SINGLE_ACTOR:
-                            # actions.append([1,0,0,0,0])
                             action=[1,0,0,0,0]
-                        #BUG 1
-                        # elif player.has_ball:
-                        # #     actions.append([1,0,0,0])
                         else:
                             action=[1,0,0,0]
-                        # elif player.has_ball:
-                        #     action=[1,0,0,0]
-                        #     can_append=False
                         break
 
                 elif  selected_action=='stepBack':
-                    # motion=1
                     if stepBack(player,self):
                         action_string+=' steps back'
                         if player.has_ball:
                             reward=reward_values['ball_possesion']
                         if not self.SINGLE_ACTOR:
-                            # actions.append([0,1,0,0,0]) 
                             action=[0,1,0,0,0]
-                        # elif player.has_ball:
-                        #     actions.append([0,1,0,0])
                         else:
                             action=[0,1,0,0]
-                        # elif player.has_ball:
-                        #     action=[0,1,0,0]
-                        #     can_append=False
                         break
 
                 elif selected_action=='dodge':
@@ -355,14 +286,8 @@ class RugbyGame:
                         action_string+=' dodges'
                         if not self.SINGLE_ACTOR:
                             action=[0,0,1,0,0]
-                            # actions.append([0,0,1,0,0])
-                        # elif player.has_ball:
-                        #     actions.append([0,0,1,0])
                         else:
                             action=[0,0,1,0]
-                        # elif player.has_ball:
-                        #     action=[0,0,1,0]
-                        #     can_append=False
                         break
 
                 elif  selected_action=='tackle':
@@ -371,20 +296,13 @@ class RugbyGame:
                     if tackle(player,tackled,self):
                         action_string+=' tackles'
                         if not self.SINGLE_ACTOR:
-                            # actions.append([0,0,0,1,0])
                             action=[0,0,0,1,0]
-                        # elif player.has_ball:
-                        #     actions.append([0,0,0,1])
                         else:
                             action=[0,0,0,1]
-                        # elif player.has_ball:
-                        #     action=[0,0,0,1]
-                        #     can_append=False
                         break
 
                 elif  selected_action=='ballPass':
                     receiver=player
-                    #TODO remove player from list to speedup selection
                     while receiver.name==player.name:
                         receiver=np.random.choice(self.attackers)
                     if ballPass(player,receiver,self,MAX_PASS_DISTANCE=7,force_backpass=False):
@@ -392,59 +310,28 @@ class RugbyGame:
                         action_string+=' passes'
                         self.last_passage=BallPassage(player,receiver)
                         if not self.SINGLE_ACTOR:
-                            # actions.append([0,0,0,0,1])
                             action=[0,0,0,0,1]
-                        # elif player.has_ball:
-                        #     actions.append([0,0,0,1])
                         else:
                             action=[0,0,0,1]
-                        # elif player.has_ball:
-                        #     action=[0,0,0,1]
-                        #     can_append=False
                         break
 
                 #PLAYER HESITATED
                 if time.time()-start_time>self.MAX_DECISION_TIME:
                     action_string+=' hesitates'
                     if not self.SINGLE_ACTOR:
-                        # actions.append([0,0,0,0,0])
                         action=[0,0,0,0,0]
-                    # elif player.has_ball:
-                        # actions.append([0,0,0,0])
                     else:
                         action=[0,0,0,0]
-                    # elif player.has_ball:
-                    #     action=[0,0,0,0]
-                    #     can_append=False
                     break
             
 
-            self.average_attackers_distance=\
-                averageWingMidDistance(self.attackers,self.average_attackers_distance,self.game_time)
-            phase_current_ball_y=self.ball_y
-            # # phase_current_ball_x=self.ball_x
             # #POSITIVE REWARD TO MOVE THE BALL TOWARD THE TRY LINE
-            # if self.SINGLE_ACTOR:
-            #     rewards+=reward_values['toward_try']* \
-            #                 (phase_initial_ball_y-phase_current_ball_y)
-            # else:
-            #     rewards.append(reward_values['toward_try']* \
-            #                     (phase_initial_ball_y-phase_current_ball_y))
-            #BUG 1
-            # rewards.append(REWARD_COEFF*reward)
-            #ADD PLAYER'S REWARD TO TEAM'S ONE, WEIGHTED IF RANDOM OR INTENTIONAL
-            # if (self.SINGLE_ACTOR and (not rewards or reward>max(rewards))) \
-            #   or not self.SINGLE_ACTOR:
             if (self.SINGLE_ACTOR and (not rewards or reward>rewards)):
                 ball_advancement=phase_initial_ball_y-phase_current_ball_y
                 rewards=reward+reward_values['toward_try']* \
                     (ball_advancement if ball_advancement>0 else 0)
                 actions=action
-                # rewards.append(reward)
-                # actions.append(action)
             elif not self.SINGLE_ACTOR:
-            # if (self.SINGLE_ACTOR and can_append and player.has_ball) \
-            #   or not self.SINGLE_ACTOR:
                 rewards.append(reward)
                 ball_advancement=phase_initial_ball_y-phase_current_ball_y
                 if ball_advancement>0:
@@ -453,24 +340,18 @@ class RugbyGame:
                 
             
             if self.VERBOSE:print(action_string)
-            #TODO is this really usefull, if performed action-wise?
             self.update()
             if self.RENDEROSE:
                 try:
                     self.render()
                 except NameError: pass
-                
-        # phase_current_ball_y=self.ball_y
-        # # phase_current_ball_x=self.ball_x
-        # #POSITIVE REWARD TO MOVE THE BALL TOWARD THE TRY LINE
-        # if self.SINGLE_ACTOR:
-        #     rewards+=reward_values['toward_try']* \
-        #                 (phase_initial_ball_y-phase_current_ball_y)
-        # else:
-        #     rewards.append(reward_values['toward_try']* \
-        #                     (phase_initial_ball_y-phase_current_ball_y))
+
 
         #PUNISHING FOR KEEPING A FORMATION TOO BROAD
+            self.average_attackers_distance=\
+                averageWingMidDistance(self.attackers,self.average_attackers_distance,self.game_time)
+            phase_current_ball_y=self.ball_y
+                
         if self.average_attackers_distance>self.attackers[1].MAX_PASS_DISTANCE:
             if self.SINGLE_ACTOR:
                 rewards+=self.average_attackers_distance*reward_values['broad_formation']
@@ -478,7 +359,7 @@ class RugbyGame:
                 rewards.append(self.average_attackers_distance*reward_values['broad_formation'])
 
 
-        return rewards,actions# if not self.SINGLE_ACTOR else actions[0]
+        return rewards,actions
 
 
     def defensePhase(self):
@@ -513,7 +394,6 @@ class RugbyGame:
                         break
 
                 elif  selected_action=='stepBack':
-                    # motion=1
                     if stepBack(player,self):
                         action_string+=' steps back'
                         break
@@ -541,7 +421,6 @@ class RugbyGame:
             
             #NEGATIVE ATTACK REWARDS
             #NOTE REWARD_COEFF weights rewards 1/3 if only one attacker acts intentionally
-            #TODO this "guilt spreading" is kinda approximative
             REWARD_COEFF=.333 if self.SINGLE_ACTOR else 1
             rewards.append(REWARD_COEFF*reward)
 
@@ -595,8 +474,7 @@ class RugbyGame:
 
         try:
             cv2.imshow('GAME:',visual_field)
-            #TODO game pause, visual scores,...
-            keykey=cv2.waitKey(self.RENDER_DURATION_ms)
+            cv2.waitKey(self.RENDER_DURATION_ms)
         except NameError: pass
 
 
@@ -611,10 +489,10 @@ class RugbyGame:
 #REWARDS      ###################################################################
 #NOTE reward assignation done in attack/defense phases
 reward_values={ 'loss': -200,
-                'time': -5,
+                'time': -10,
                 'ball_loss': -5,
                 'win': 200,
-                'toward_try': +20,
+                'toward_try': +8,#+20,
                 'away_try': -3,#unused
                 'broad_formation': -40,
                 'ball_gain': 0,
@@ -626,7 +504,6 @@ reward_values={ 'loss': -200,
 ###################################################################
 #ACTIONS     ######################################################
 #NOTE actions return action_performed:bool
-#TODO rewards should be returned by actions, but it's easier if done in attack phase
 def advance(player:Player,game:RugbyGame,motion=1):
     if player.can_advance:
         if player.role=='attacker':
@@ -637,7 +514,7 @@ def advance(player:Player,game:RugbyGame,motion=1):
                     game.previous_ball_y=player.y
                     game.ball_y=destination_tile_y
                     player.y=destination_tile_y
-                    return True#, reward_values['toward_try']*motion
+                    return True
         else:
             destination_tile_y=player.y+motion
             if destination_tile_y>=0 and destination_tile_y<game.FIELD_SIZE_Y:
@@ -646,8 +523,8 @@ def advance(player:Player,game:RugbyGame,motion=1):
                     game.previous_ball_y=player.y
                     game.ball_y=destination_tile_y
                     player.y=destination_tile_y
-                    return True #,0
-    return False#,0
+                    return True
+    return False
 
 
 def stepBack(player:Player,game:RugbyGame,motion=1):
@@ -660,7 +537,7 @@ def stepBack(player:Player,game:RugbyGame,motion=1):
                 game.previous_ball_y=player.y
                 game.ball_y=destination_tile_y
                 player.y=destination_tile_y
-                return True#,0
+                return True
     else:
         destination_tile_y=player.y-motion
         if destination_tile_y>=0 and destination_tile_y<game.FIELD_SIZE_Y:
@@ -670,15 +547,14 @@ def stepBack(player:Player,game:RugbyGame,motion=1):
                 game.ball_y=destination_tile_y
                 player.y=destination_tile_y
                 player.can_advance=True
-                return True#,0
-    return False#,0
+                return True
+    return False
 
 
 def dodge(player:Player,game:RugbyGame,motion=0):
     """
     distance is signed
     """
-    #TODO select adequate reward for dodging opponents
     destination_tile_x=player.x+motion
     if destination_tile_x>=0 and destination_tile_x<game.FIELD_SIZE_X:
         if motion>0:
@@ -687,15 +563,15 @@ def dodge(player:Player,game:RugbyGame,motion=0):
                 game.previous_ball_x=player.x
                 game.ball_x=destination_tile_x
                 player.x=destination_tile_x
-                return True#,0
+                return True
         else:
             if all([game.tileIsFree(path_tile,player.y) 
                 for path_tile in range(destination_tile_x,player.x)]):
                 game.previous_ball_x=player.x
                 game.ball_x=destination_tile_x
                 player.x=destination_tile_x
-                return True#,0
-    return False#,0
+                return True
+    return False
 
 
 def ballPass(thrower:Player,receiver:Player,game:RugbyGame,MAX_PASS_DISTANCE=None,force_backpass=False):
@@ -715,9 +591,8 @@ def ballPass(thrower:Player,receiver:Player,game:RugbyGame,MAX_PASS_DISTANCE=Non
                 game.previous_ball_y=thrower.y
                 game.ball_x=receiver.x
                 game.ball_y=receiver.y
-                # game.had_ball=receiver.role
-                return True#,.5
-    return False#,0
+                return True
+    return False
 
 
 def tackle(charger:Player,tackled:Player,game:RugbyGame ,MAX_TACKLE_DISTANCE=1.5):
@@ -734,14 +609,7 @@ def tackle(charger:Player,tackled:Player,game:RugbyGame ,MAX_TACKLE_DISTANCE=1.5
             game.previous_ball_y=tackled.y
             game.ball_x=charger.x
             game.ball_y=charger.y
-            # reward=reward_values['ball_gain'] if tackled.role=='defender' else reward_values['ball_loss']
-        #TODO may add arg to decide if do both always
         else:
             tackled.can_advance=False
-            # reward=0
-        return True#, reward
-    return False#,0
-
-
-#TODO
-# def blockPass
+        return True
+    return False
