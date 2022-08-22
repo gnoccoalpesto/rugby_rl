@@ -17,13 +17,10 @@ class Player:
         self.number=number
         self.role=role
 
-        #TODO use this instead of whole tile for visual
-        # self.SHAPE_SIZE=5
-
         self.previous_x=self.initial_x=initial_pose_x
         self.previous_y=self.initial_y=initial_pose_y
 
-        #speed of 4 massively improves attackers winrate
+        #NOTE speed of 4 massively improves attackers winrate
         self.MAX_SPEED=3
 
         self.MAX_PASS_DISTANCE=4
@@ -39,8 +36,6 @@ class Player:
 
         self.could_advance=self.can_advance=True
 
-        # self.team_distance=0
-
 
 def distance(player1:Player,player2:Player):
     """
@@ -54,10 +49,8 @@ def averagePlayerTeamDistance(player:Player,teammates:Player,time=1):
     """
     rationale: if player stays closer to MAX_BALL_PASS_DISTANCE
     """
-    #TODO typing teammates players array
     player.team_distance=(time-1)*player.team_distance
     for teammate in teammates:
-        #TODO how to arg type for arrays such methods visible?
         if teammate.name!=player.name:
             player.team_distance+=distance(player,teammate)
     player.team_distance/=time
@@ -72,8 +65,6 @@ def averageWingMidDistance(team:list,average_wing_mid_distance:float,time_step=0
     return average_wing_mid_distance
 
     
-#TODO may substitute with a named touple
-#from collection import namedtouples
 class BallPassage:
     def __init__(self,sender:Player,receiver:Player):
         self.sender=sender
