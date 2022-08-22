@@ -56,7 +56,6 @@ class policyNet:
     def sample(self,state:np.ndarray):
 
         # with tf.device('/device:GPU:0'):
-        #TODO action masking for non valid ones
         if self.PLAY_RANDOMLY:
             actions_probabilities=1/output_len*np.ones(self.OUTPUT_SHAPE,dtype=float)
             return actions_probabilities
@@ -69,7 +68,6 @@ class policyNet:
 
         # with tf.device('/device:GPU:0'):
         game_loss=[]
-        #TODO more efficient if G_t=gamma * G_t++ + R_t++?
         expected_return=0
         for time_step,(state,action,next_state) in enumerate(zip(states,actions,next_states)):
             #DISCOUNTED REWARDS SUM
@@ -80,9 +78,6 @@ class policyNet:
             with tf.GradientTape() as tape:
                 actions_probabilities=self.model(state[None,:])[0]
                 log_probs=tf.nn.log_softmax(actions_probabilities)
-                # log_probs=np.log(softmaxInActionPreferencesPolicy(self.propabilities,features_mode='unitary'))
-                #TODO masking
-                # log_prob=tf.reduce_sum(tf.one_hot(net_output,num_outputs)*log_probs,axis=1)
 
                 loss=-expected_return*log_probs
                 game_loss.append(loss.numpy()[0,0])
@@ -125,7 +120,6 @@ def startGame(game:RugbyGame):
                 if field is None:
                     #EPISODE REWARD for win or loss
                     #NOTE since episode termination computed at the beginning of step
-                    #TODO could change
                     rewards_history[-1]+=rewards
 
                     #EVOLVED STATE HISTORY
@@ -141,41 +135,40 @@ def startGame(game:RugbyGame):
             print('PARTIAL SCORE\tATT {} -- {} DEF'.format(game.ATTACKERS_WON,game.DEFENDERS_WON))
 
             #UPDATE NET
-            if not args.RNG:
-                loss_history.append(net.train(  state_history, \
-                                                actions_history, \
-                                                rewards_history, \
-                                                next_state_history))
+            loss_history.append(net.train(  state_history, \
+                                            actions_history, \
+                                            rewards_history, \
+                                            next_state_history))
 
     except KeyboardInterrupt:pass
-    
+
     #LEARNING RESULT WRT LOSS
-    if not args.RNG:
-        try:
-            plt.plot(loss_history,color='red',marker='o')
-            plt.xticks(range(0,len(loss_history)+1,1))
-            plt.ylabel('average loss')
-            plt.xlabel('games')
-            games_score=" final score: ATT {} -- {} DEF".format(game.ATTACKERS_WON,game.DEFENDERS_WON)
-            plt.title('LEARNING RESULTS;'+games_score)
-            plt.show()
-        except NameError: pass
+    try:
+        plt.plot(loss_history,color='red',marker='o')
+        plt.xticks(range(0,len(loss_history)+1,1))
+        plt.ylabel('average loss')
+        plt.xlabel('games')
+        games_score=" final score: ATT {} -- {} DEF".format(game.ATTACKERS_WON,game.DEFENDERS_WON)
+        plt.title('LEARNING RESULTS;'+games_score)
+        plt.show()
+    except NameError: pass
 
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
-def softmaxInActionPreferencesPolicy(weights:np.ndarray,features=[],
-                                    features_mode='linear',stabilized=False):
-    """
-    https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative
-    stable in case output reaches the limit of float bytes
-    """
-    if features_mode=='unitary':
-        preferences=np.sum(weights)
-    elif features_mode=='linear':
-        preferences=np.dot(weights.T,features)
+#NOTE UNUSED
+# def softmaxInActionPreferencesPolicy(weights:np.ndarray,features=[],
+#                                     features_mode='linear',stabilized=False):
+#     """
+#     https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative
+#     stable in case output reaches the limit of float bytes
+#     """
+#     if features_mode=='unitary':
+#         preferences=np.sum(weights)
+#     elif features_mode=='linear':
+#         preferences=np.dot(weights.T,features)
 
-    pref_exponential = np.exp(preferences if not stabilized else preferences-np.max(preferences))
-    return np.exp(pref_exponential)/np.sum(pref_exponential)
+#     pref_exponential = np.exp(preferences if not stabilized else preferences-np.max(preferences))
+#     return np.exp(pref_exponential)/np.sum(pref_exponential)
 
 
 #############################################################################
@@ -200,12 +193,8 @@ def parse_arguments():
                         help='shows visual game field (requires openCV)')
     parser.add_argument('-f', '--frame_duration',type=int, default=10, required=False,
                         help='frame permanence duration in ms')
-    #TODO add mutual exclusivity between --RNG and -s
     parser.add_argument('--RNG',action='store_true',
                         help='starts a random game; all params valid except --single_actor')
-    #RETURNS DICT
-    # return vars(parser.parse_args())
-    #RETURNS STRUC
     return parser.parse_args()
 
 
@@ -223,12 +212,6 @@ if __name__ == '__main__':
                 renderose=args.renderose,
                 render_duration_ms=args.frame_duration)
 
-    #BEHAVIOUR OVERRIDE; NOTE UNUSED
-    # game.attacker_behaviour=np.random.choice
-    # game.arg_attacker_behaviour=game.ATTACKER_ACTIONS
-    # game.defender_behaviour=np.random.choice
-    # game.arg_defender_behaviour=game.DEFENDER_ACTIONS
-
     output_len=len(game.attacker_action_pool if not args.single_actor
                     else game.attacker_ball_action_pool)
 
@@ -239,7 +222,6 @@ if __name__ == '__main__':
 
     print('-=`WELCOME TO THE GAME OF RUGBY=-')
     startGame(game)
-
 
     try:
         cv2.destroyAllWindows()
