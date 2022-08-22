@@ -80,6 +80,8 @@ NOTE: if unavailable, will only throw a warning
   [-f FRAME_DURATION] the lower, the higher the render frame rate; default 10ms
   
   [--RNG] plays a completely random match (no learning or loss printing)
+  
+  Ctrl+C stops the simulation and prints partial results
 
 
 ## REPOSITORY
