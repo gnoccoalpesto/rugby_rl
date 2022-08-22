@@ -324,7 +324,8 @@ class RugbyGame:
                         action=[0,0,0,0]
                     break
             
-
+            phase_current_ball_y=self.ball_y
+            
             # #POSITIVE REWARD TO MOVE THE BALL TOWARD THE TRY LINE
             if (self.SINGLE_ACTOR and (not rewards or reward>rewards)):
                 ball_advancement=phase_initial_ball_y-phase_current_ball_y
@@ -350,7 +351,6 @@ class RugbyGame:
         #PUNISHING FOR KEEPING A FORMATION TOO BROAD
             self.average_attackers_distance=\
                 averageWingMidDistance(self.attackers,self.average_attackers_distance,self.game_time)
-            phase_current_ball_y=self.ball_y
                 
         if self.average_attackers_distance>self.attackers[1].MAX_PASS_DISTANCE:
             if self.SINGLE_ACTOR:
