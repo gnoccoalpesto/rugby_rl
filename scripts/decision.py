@@ -43,11 +43,8 @@ class policyNet:
         self.model= keras.Sequential([
                 keras.layers.Flatten(input_shape=input_shape),
                 keras.layers.Dense(32, activation="softmax"),
-                # keras.layers.Dropout(0.2),
-                # keras.layers.Dense(32, activation="softmax"),
-                # keras.layers.Dropout(0.2),
-                # keras.layers.Dense(32, activation="softmax"),
-                keras.layers.Dense( activation='softmax',units=self.OUTPUT_LEN),
+                keras.layers.Dropout(0.2),
+                keras.layers.Dense(activation='softmax',units=self.OUTPUT_LEN),
                 keras.layers.Reshape((self.OUTPUT_SHAPE))
         ])
 

@@ -64,6 +64,15 @@ def averageWingMidDistance(team:list,average_wing_mid_distance:float,time_step=0
     average_wing_mid_distance=(average_wing_mid_distance*time_step + wing_mid_distance)/(time_step+1)
     return average_wing_mid_distance
 
+
+def teamAverageTryLineDistance(team:list,try_line_y:int):
+    """
+    vertical average distance between player and try line (goal)
+    excluding smaller value
+    """
+    distances=[player.y-try_line_y for player in team]
+    distances.pop(np.argmin(distances))
+    return sum(distances)/len(team)
     
 class BallPassage:
     def __init__(self,sender:Player,receiver:Player):

@@ -358,6 +358,13 @@ class RugbyGame:
             else:
                 rewards.append(self.average_attackers_distance*reward_values['broad_formation'])
 
+        #PUNISHING FOR KEEPING A FORMATION TOO FAR FROM TRY LINE
+        average_try_line_distance=teamAverageTryLineDistance(self.attackers,self.DEFENSE_TEAM_LINE)   
+        if self.SINGLE_ACTOR:
+            rewards+=average_try_line_distance*reward_values['away_try']
+        else:
+            rewards.append(average_try_line_distance*reward_values['away_try'])
+
 
         return rewards,actions
 
@@ -491,13 +498,13 @@ class RugbyGame:
 reward_values={ 'loss': -200,
                 'time': -10,
                 'ball_loss': -5,
-                'win': 200,
+                'win': 300,
                 'toward_try': +8,#+20,
-                'away_try': -3,#unused
-                'broad_formation': -40,
+                'away_try': -2,
+                'broad_formation': -30,
                 'ball_gain': 0,
                 'ball_possesion': 0,
-                'hesitation':-40
+                'hesitation':-80
             }
 
         
