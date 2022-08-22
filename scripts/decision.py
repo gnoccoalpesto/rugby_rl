@@ -104,48 +104,51 @@ def startGame(game:RugbyGame):
     actions_history=[]
     rewards_history=[]
 
-    while game.game_counter<game.GAMES_TO_PLAY:
-        #INITIALIZE AND OBSERVE STATE
-        #NOTE field==field's state
-        field=game.reset()
+    try:
+        while game.game_counter<game.GAMES_TO_PLAY:
+            #INITIALIZE AND OBSERVE STATE
+            #NOTE field==field's state
+            field=game.reset()
 
-        #EPISODE GENERATION
-        while True:
-            state_history.append(field)
+            #EPISODE GENERATION
+            while True:
+                state_history.append(field)
 
-            #ACTIONS SELECTION
-            attack_probabilities=net.sample(field)
+                #ACTIONS SELECTION
+                attack_probabilities=net.sample(field)
 
-            #SYSTEM EVOLUTION
-            #NOTE actions: the ones actually performed
-            field,rewards,actions=game.step(attack_probabilities)
+                #SYSTEM EVOLUTION
+                #NOTE actions: the ones actually performed
+                field,rewards,actions=game.step(attack_probabilities)
 
-            #TERMINATION
-            if field is None:
-                #EPISODE REWARD for win or loss
-                #NOTE since episode termination computed at the beginning of step
-                #TODO could change
-                rewards_history[-1]+=rewards
+                #TERMINATION
+                if field is None:
+                    #EPISODE REWARD for win or loss
+                    #NOTE since episode termination computed at the beginning of step
+                    #TODO could change
+                    rewards_history[-1]+=rewards
 
-                #EVOLVED STATE HISTORY
-                next_state_history=state_history[1:].copy()
-                state_history.pop()
-                break
+                    #EVOLVED STATE HISTORY
+                    next_state_history=state_history[1:].copy()
+                    state_history.pop()
+                    break
 
-            actions_history.append(actions)
-            rewards_history.append(rewards)
+                actions_history.append(actions)
+                rewards_history.append(rewards)
 
-        #GAME STATISTICS
-        if game.VERBOSE:print('GAME OVER. winner: {}\n'.format(game.winner))
-        print('PARTIAL SCORE\tATT {} -- {} DEF'.format(game.ATTACKERS_WON,game.DEFENDERS_WON))
+            #GAME STATISTICS
+            if game.VERBOSE:print('GAME OVER. winner: {}\n'.format(game.winner))
+            print('PARTIAL SCORE\tATT {} -- {} DEF'.format(game.ATTACKERS_WON,game.DEFENDERS_WON))
 
-        #UPDATE NET
-        if not args.RNG:
-            loss_history.append(net.train(  state_history, \
-                                            actions_history, \
-                                            rewards_history, \
-                                            next_state_history))
+            #UPDATE NET
+            if not args.RNG:
+                loss_history.append(net.train(  state_history, \
+                                                actions_history, \
+                                                rewards_history, \
+                                                next_state_history))
 
+    except KeyboardInterrupt:pass
+    
     #LEARNING RESULT WRT LOSS
     if not args.RNG:
         try:
