@@ -30,10 +30,12 @@ class policyNet:
         INPUT SHAPE: flattened field array, default=1,13*9==117
         OUTPUT SHAPE: 4 if all attacking players learn  else 5
     """
-    def __init__(self,input_shape,output_len,single_actor=True,play_randomly=False):
+    def __init__(self,input_shape,output_len,episode_number,single_actor=True,play_randomly=False):
 
-        self.LEARNING_RATE=2
+        self.LEARNING_RATE=1.8
         self.REWARD_DISCOUNT_FACTOR=.92
+        self.EPISODE_NUMBER=episode_number
+        self.current_episode=0
 
         #if single_actor, probabilities only for ball bearer
         self.OUTPUT_LEN=output_len*(1 if single_actor else 3)
@@ -60,15 +62,26 @@ class policyNet:
             actions_probabilities=1/output_len*np.ones(self.OUTPUT_SHAPE,dtype=float)
             return actions_probabilities
 
-        #TODO normalization; NOTE easier to do in game       
+        #TODO normalization; NOTE easier to do in game
         return self.model.predict(state[None,:])[0]
 
 
-    def train(self,states:list,actions:list,rewards:list,next_states:list):
+    def diminishingLearningRate(self):
+        """
+        diminishing learning rate based on an empirical rule
+        """
+        return self.LEARNING_RATE*(1.2- self.current_episode/self.EPISODE_NUMBER)
 
+
+    def train(self,states:list,actions:list,rewards:list,next_states:list,episode=0):
         # with tf.device('/device:GPU:0'):
         game_loss=[]
         expected_return=0
+        #DIMINISHING LEARNING RATE UPDATE WITH INCREASING EPISODES
+        if episode!=self.current_episode:
+            self.current_episode=episode
+            self.optimizer.learning_rate.assign(self.diminishingLearningRate())
+
         for time_step,(state,action,next_state) in enumerate(zip(states,actions,next_states)):
             #DISCOUNTED REWARDS SUM
             expected_return=sum([(self.REWARD_DISCOUNT_FACTOR**future_time)*reward
@@ -78,6 +91,7 @@ class policyNet:
             with tf.GradientTape() as tape:
                 actions_probabilities=self.model(state[None,:])[0]
                 log_probs=tf.nn.log_softmax(actions_probabilities)
+                # log_probs=tf.nn.log_softmax(tf.convert_to_tensor(action)[None,:])
 
                 loss=-expected_return*log_probs
                 game_loss.append(loss.numpy()[0,0])
@@ -89,6 +103,7 @@ class policyNet:
             self.optimizer.apply_gradients(zip(grads,vars))
             #AVERAGE FOR SSTATISTICS
             return np.mean(game_loss)
+
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
 def startGame(game:RugbyGame):
@@ -138,7 +153,8 @@ def startGame(game:RugbyGame):
             loss_history.append(net.train(  state_history, \
                                             actions_history, \
                                             rewards_history, \
-                                            next_state_history))
+                                            next_state_history,
+                                            episode=game.game_counter))
 
     except KeyboardInterrupt:pass
 
@@ -217,6 +233,7 @@ if __name__ == '__main__':
 
     net=policyNet(  input_shape=(args.lenght,args.width),\
                     output_len=output_len,
+                    episode_number=args.games,
                     single_actor=args.single_actor,
                     play_randomly=args.RNG)
 

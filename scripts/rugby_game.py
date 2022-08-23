@@ -423,7 +423,7 @@ class RugbyGame:
                 
                 if time.time()-start_time>self.MAX_DECISION_TIME:
                     action_string+=' hesitates'
-                    reward=reward_values['hesitation']
+                    # reward=reward_values['hesitation']
                     break
             
             #NEGATIVE ATTACK REWARDS
@@ -487,7 +487,7 @@ class RugbyGame:
 
     def tileIsFree(self,tile_x,tile_y):
         for player in [*self.attackers,*self.defenders]:
-            if player.x==tile_x and player.y==tile_y:
+            if player.x==tile_x and player.y==tile_y:   
                 return False
         return True
 
@@ -505,7 +505,7 @@ reward_values={ 'loss': -200,
                 'ball_gain': 0,
                 'ball_possesion': 0,
                 'hesitation':-80
-            }
+        }
 
         
 ###################################################################
