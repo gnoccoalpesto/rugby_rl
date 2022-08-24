@@ -84,8 +84,9 @@ class policyNet:
 
         for time_step,(state,action,next_state) in enumerate(zip(states,actions,next_states)):
             #DISCOUNTED REWARDS SUM
-            expected_return=sum([(self.REWARD_DISCOUNT_FACTOR**future_time)*reward
-                for future_time,reward in enumerate(rewards[time_step:])])
+            # expected_return=sum([(self.REWARD_DISCOUNT_FACTOR**future_time)*reward
+            #     for future_time,reward in enumerate(rewards[time_step:])])
+            expected_return=sum([reward for reward in rewards[time_step:]])
 
             #GRADIENT ASCENT
             with tf.GradientTape() as tape:
@@ -109,51 +110,56 @@ class policyNet:
 def startGame(game:RugbyGame):
 
     loss_history=[]
-    state_history=[]
-    # next_state_history=[]
-    actions_history=[]
-    rewards_history=[]
-
     try:
         while game.game_counter<game.GAMES_TO_PLAY:
+            states_history=[]
+            # next_states_history=[]
+            actions_history=[]
+            # rewards_history=[]
+
             #INITIALIZE AND OBSERVE STATE
             #NOTE field==field's state
             field=game.reset()
 
             #EPISODE GENERATION
             while True:
-                state_history.append(field)
+                states_history.append(field)
 
                 #ACTIONS SELECTION
                 attack_probabilities=net.sample(field)
 
                 #SYSTEM EVOLUTION
                 #NOTE actions: the ones actually performed
-                field,rewards,actions=game.step(attack_probabilities)
+                # field,rewards,actions=game.step(attack_probabilities)
+                field,actions=game.step(attack_probabilities)
 
                 #TERMINATION
                 if field is None:
                     #EPISODE REWARD for win or loss
                     #NOTE since episode termination computed at the beginning of step
-                    rewards_history[-1]+=rewards
+                    # rewards_history[-1]+=rewards
+                    #TODO add also rewards for other stuff here: broad formation, lazy plays,...
+                    #       to be added to win or loss
+                    rewards_history=len(actions_history)* \
+                        [reward_values['win' if game.ATTACKERS_WON else 'loss']]
 
                     #EVOLVED STATE HISTORY
-                    next_state_history=state_history[1:].copy()
-                    state_history.pop()
+                    next_states_history=states_history[1:].copy()
+                    states_history.pop()
                     break
 
                 actions_history.append(actions)
-                rewards_history.append(rewards)
+                # rewards_history.append(rewards)
 
             #GAME STATISTICS
             if game.VERBOSE:print('GAME OVER. winner: {}\n'.format(game.winner))
             print('PARTIAL SCORE\tATT {} -- {} DEF'.format(game.ATTACKERS_WON,game.DEFENDERS_WON))
 
             #UPDATE NET
-            loss_history.append(net.train(  state_history, \
+            loss_history.append(net.train(  states_history, \
                                             actions_history, \
                                             rewards_history, \
-                                            next_state_history,
+                                            next_states_history,
                                             episode=game.game_counter))
 
     except KeyboardInterrupt:pass
