@@ -206,7 +206,7 @@ class RugbyGame:
         if self.game_time>=self.GAME_DURATION:
             if self.VERBOSE:print("______time's up______")
             self.DEFENDERS_WON+=1
-            self.winner="DEFENDERS"
+            self.winner="defenders"
             return True
 
         #ATTACKING TEAM SURPASSED TRY LINE
@@ -214,7 +214,7 @@ class RugbyGame:
             if player.has_ball and player.y<=self.DEFENSE_TEAM_LINE:
                 if self.VERBOSE:print("______point scored by attackers______")
                 self.ATTACKERS_WON+=1
-                self.winner="ATTACKERS"
+                self.winner="attackers"
                 return True
 
 
