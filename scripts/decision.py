@@ -141,7 +141,7 @@ def startGame(game:RugbyGame):
                     #TODO add also rewards for other stuff here: broad formation, lazy plays,...
                     #       to be added to win or loss
                     rewards_history=len(actions_history)* \
-                        [reward_values['win' if game.ATTACKERS_WON else 'loss']]
+                        [reward_values['win' if game.winner=='attackers' else 'loss']]
 
                     #EVOLVED STATE HISTORY
                     next_states_history=states_history[1:].copy()
