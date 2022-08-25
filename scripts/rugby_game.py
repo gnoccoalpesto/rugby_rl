@@ -75,8 +75,8 @@ class RugbyGame:
         self.GAMES_TO_PLAY=int(games_to_play)
         self.game_counter=0
         self.winner=""
-        self.DEFENDERS_WON=0
-        self.ATTACKERS_WON=0
+        self.won_by_defenders=0
+        self.won_by_attackers=0
 
         #prints actions in terminal
         self.VERBOSE=verbose
@@ -121,7 +121,7 @@ class RugbyGame:
 
 
 #---------------------------------------------------------------------
-    def step(self,team_actions_probabilities):
+    def step(self,team_attack_probabilities,team_defense_probabilities):
         """
         this method checks if the game terminated, otherwise plays a game's turn: attack and defense phases
         self.SINGLE_ACTOR: only the ball bearer acts intentionally, otherwise randomly
@@ -136,8 +136,8 @@ class RugbyGame:
         # actions=[]
 
         if self.checkTerminalConditions():
-            # return None,reward_values['win'] if self.ATTACKERS_WON else reward_values['loss'],None
-            return None,None
+            # return None,reward_values['win'] if self.won_by_attackers else reward_values['loss'],None
+            return None,None, None,None
 
         self.game_time+=1
 
@@ -150,15 +150,18 @@ class RugbyGame:
             except NameError: pass
 
         #VALUES EXTRACTION
-        team_actions_probabilities= \
-            team_actions_probabilities[0][0] if self.SINGLE_ACTOR \
-            else team_actions_probabilities[0]
+        team_attack_probabilities= \
+            team_attack_probabilities[0][0] if self.SINGLE_ACTOR \
+            else team_attack_probabilities[0]
+        team_defense_probabilities= \
+            team_defense_probabilities[0][0] if self.SINGLE_ACTOR \
+            else team_defense_probabilities[0]
 
         #NOTE defense phase performed agter reward assignation
         # attack_rewards,attack_actions=self.attackPhase(team_actions_probabilities)
-        attack_actions=self.attackPhase(team_actions_probabilities)
+        attack_actions=self.attackPhase(team_attack_probabilities)
+        field_after_attack=self.update()
 
-        actions=attack_actions
         # if not self.SINGLE_ACTOR:
         #     rewards.extend(attack_rewards)
         # else:
@@ -166,12 +169,13 @@ class RugbyGame:
         # rewards.append(reward_values['time'])
 
         # rewards.extend(self.defensePhase())
-        self.defensePhase()
+        defense_actions=self.defensePhase(team_defense_probabilities)
+        field_after_defense=self.update()
 
         #SUM OF THE COOPERATIVE (attack) AND COMPETITIVE (defense) REWARDS
         # rewards=sum(rewards)
         # return self.field,rewards,actions
-        return self.field,actions
+        return field_after_attack,field_after_defense,attack_actions,defense_actions
 
 
     def update(self):
@@ -205,21 +209,29 @@ class RugbyGame:
         #GAME TIME ENDED
         if self.game_time>=self.GAME_DURATION:
             if self.VERBOSE:print("______time's up______")
-            self.DEFENDERS_WON+=1
-            self.winner="DEFENDERS"
+            self.winner="tie"
             return True
 
         #ATTACKING TEAM SURPASSED TRY LINE
         for player in self.attackers:
             if player.has_ball and player.y<=self.DEFENSE_TEAM_LINE:
                 if self.VERBOSE:print("______point scored by attackers______")
-                self.ATTACKERS_WON+=1
-                self.winner="ATTACKERS"
+                self.won_by_attackers+=1
+                self.winner="attackers"
+                return True
+
+        #DEFENSE TEAM SURPASSED TRY LINE
+        for player in self.defenders:
+            if player.has_ball and player.y>=self.ATTACK_TEAM_LINE:
+                if self.VERBOSE:print("______point scored by defenders")
+                self.won_by_defenders+=1
+                self.winner="defenders"
                 return True
 
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
     def attackPhase(self,team_actions_probabilities):
+        self.update
         # rewards=[]
         actions=[]
         self.average_attackers_distance=0
@@ -342,7 +354,7 @@ class RugbyGame:
 
 
             if self.VERBOSE:print(action_string)
-            self.update()
+            # self.update()
             if self.RENDEROSE:
                 try:
                     self.render()
@@ -372,6 +384,7 @@ class RugbyGame:
 
 
     def defensePhase(self):
+        self.update
         # rewards=[]
 
         for player in self.defenders:
@@ -440,6 +453,7 @@ class RugbyGame:
                 except NameError: pass
 
         # return rewards
+        # return actions
 
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
@@ -508,7 +522,8 @@ class RugbyGame:
 #         }
 
 reward_values={ 'loss': -1,
-                'win': +1
+                'win': +1,
+                'tie': -.5
 }
 
 

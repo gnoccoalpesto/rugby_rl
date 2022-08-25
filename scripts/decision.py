@@ -109,46 +109,62 @@ class policyNet:
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
 def startGame(game:RugbyGame):
 
-    loss_history=[]
+    loss_attack_history=[]
+    loss_defense_history=[]
     try:
         while game.game_counter<game.GAMES_TO_PLAY:
-            states_history=[]
-            # next_states_history=[]
-            actions_history=[]
+            states_attack_history=[]
+            states_defense_history=[]
+            # next_states_history_att=[]
+            actions_attack_history=[]
+            actions_defense_history=[]
             # rewards_history=[]
 
             #INITIALIZE AND OBSERVE STATE
-            #NOTE field==field's state
-            field=game.reset()
+            #TODO wrong assignation: first defense state should be after attack
+            field_after_defense=field_after_attack=game.reset()
 
             #EPISODE GENERATION
             while True:
-                states_history.append(field)
+                states_attack_history.append(field_after_defense)
+                states_defense_history.append(field_after_attack)
 
                 #ACTIONS SELECTION
-                attack_probabilities=net.sample(field)
+                attack_probabilities=netAttack.sample(field_after_defense)
+                defense_probabilities=netDefense.sample(field_after_attack)
 
                 #SYSTEM EVOLUTION
                 #NOTE actions: the ones actually performed
                 # field,rewards,actions=game.step(attack_probabilities)
-                field,actions=game.step(attack_probabilities)
+                field_after_attack,field_after_defense,attack_actions,defense_actions= \
+                                            game.step(attack_probabilities,defense_probabilities)
 
                 #TERMINATION
-                if field is None:
+                if field_after_attack is None:
                     #EPISODE REWARD for win or loss
                     #NOTE since episode termination computed at the beginning of step
                     # rewards_history[-1]+=rewards
                     #TODO add also rewards for other stuff here: broad formation, lazy plays,...
                     #       to be added to win or loss
-                    rewards_history=len(actions_history)* \
-                        [reward_values['win' if game.ATTACKERS_WON else 'loss']]
+                    if game.winner=='attackers':
+                        rewards_attack_history=len(actions_attack_history)* [reward_values['win']]
+                        rewards_defense_history=len(actions_defense_history)* [reward_values['loss']]
+                    elif game.winner=='defenders':
+                        rewards_attack_history=len(actions_attack_history)* [reward_values['loss']]
+                        rewards_defense_history=len(actions_defense_history)* [reward_values['win']]
+                    else:
+                        rewards_attack_history=len(actions_attack_history)* [reward_values['tie']]
+                        rewards_defense_history=len(actions_defense_history)* [reward_values['tie']]
 
                     #EVOLVED STATE HISTORY
-                    next_states_history=states_history[1:].copy()
-                    states_history.pop()
+                    next_states_attack_history=states_attack_history[1:].copy()
+                    states_attack_history.pop()
+                    next_states_defense_history=states_defense_history[1:].copy()
+                    states_defense_history.pop()
                     break
 
-                actions_history.append(actions)
+                actions_attack_history.append(attack_actions)
+                actions_defense_history.append(defense_actions)
                 # rewards_history.append(rewards)
 
             #GAME STATISTICS
@@ -156,18 +172,23 @@ def startGame(game:RugbyGame):
             print('PARTIAL SCORE\tATT {} -- {} DEF'.format(game.ATTACKERS_WON,game.DEFENDERS_WON))
 
             #UPDATE NET
-            loss_history.append(net.train(  states_history, \
-                                            actions_history, \
-                                            rewards_history, \
-                                            next_states_history,
+            loss_attack_history.append(netAttack.train(  states_attack_history, \
+                                            actions_attack_history, \
+                                            rewards_attack_history, \
+                                            next_states_attack_history,
+                                            episode=game.game_counter))
+            loss_defense_history.append(netDefense.train(  states_defense_history, \
+                                            actions_defense_history, \
+                                            rewards_defense_history, \
+                                            next_states_defense_history,
                                             episode=game.game_counter))
 
     except KeyboardInterrupt:pass
 
     #LEARNING RESULT WRT LOSS
     try:
-        plt.plot(loss_history,color='red',marker='o')
-        plt.xticks(range(0,len(loss_history)+1,1))
+        plt.plot(loss_attack_history,color='red',marker='o')
+        plt.xticks(range(0,len(loss_attack_history)+1,1))
         plt.ylabel('average loss')
         plt.xlabel('games')
         games_score=" final score: ATT {} -- {} DEF".format(game.ATTACKERS_WON,game.DEFENDERS_WON)
@@ -237,11 +258,18 @@ if __name__ == '__main__':
     output_len=len(game.attacker_action_pool if not args.single_actor
                     else game.attacker_ball_action_pool)
 
-    net=policyNet(  input_shape=(args.lenght,args.width),\
-                    output_len=output_len,
-                    episode_number=args.games,
-                    single_actor=args.single_actor,
-                    play_randomly=args.RNG)
+    netAttack = policyNet(  input_shape=(args.lenght,args.width),\
+                            output_len=output_len,
+                            episode_number=args.games,
+                            single_actor=args.single_actor,
+                            play_randomly=args.RNG)
+
+    netDefense= policyNet(  input_shape=(args.lenght,args.width),\
+                            output_len=output_len,
+                            episode_number=args.games,
+                            single_actor=args.single_actor,
+                            play_randomly=args.RNG)
+
 
     print('-=`WELCOME TO THE GAME OF RUGBY=-')
     startGame(game)
