@@ -92,3 +92,19 @@ scripts/rugby_game.py: game definition, rules, actions, displaying
 
 scripts/decision.py: launches the game, learning agent definition, argparser
 
+
+
+############################
+POSSIBLE IMPROVEMENTS
+
+-[FORCING EXPLORATION](https://ai.stackexchange.com/questions/21699/should-i-use-exploration-strategy-in-policy-gradient-algorithms):
+policy-gradients are strictly on-policy usually, but since they have a stochastic policy, exploration is still possible.
+in AC, exploration can be forced w/ C
+
+other possiblities:
+ [deep deterministic policy gradient](https://towardsdatascience.com/deep-deterministic-policy-gradients-explained-2d94655a9b7b)
+determnistic pi (corrected for being on-pi), while exploration enforced by external noise function
+
+  entropy regularization (penalize low policy entropy in loss) prevents pi from becoming "too deterministic" too early
+
+ maximum-entropy methods (eg SAC, ) different strategies for promoting policy entropy
